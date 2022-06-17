@@ -2,8 +2,6 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./TokenA.sol";
-import "./TokenB.sol";
 
 contract TokenSwap {
     struct Order {
@@ -14,7 +12,6 @@ contract TokenSwap {
         bool isSet;
     }
 
-    IERC20 public token;
     uint256 public _totalOrder;
     // mapping(uint256 => Order) private _orderList;
     Order[] _orderList;
@@ -34,12 +31,12 @@ contract TokenSwap {
         address buyer
     );
 
-    TokenA public _tokenA;
-    TokenB public _tokenB;
+    IERC20 public _tokenA;
+    IERC20 public _tokenB;
 
     constructor(address tokenA, address tokenB) {
-        _tokenA = TokenA(tokenA);
-        _tokenB = TokenB(tokenB);
+        _tokenA = IERC20(tokenA);
+        _tokenB = IERC20(tokenB);
     }
 
     function totalOrder() external view returns (uint256) {
@@ -86,15 +83,23 @@ contract TokenSwap {
 
         Order memory order = _orderList[bundleId];
 
-        uint256 exchangeAmount = volume * (order.price + 0.5 ether);
-        exchangeAmount = exchangeAmount + (exchangeAmount * 2) / 100;
+        uint256 tokenFee = (volume * 2) / 100;
+        uint256 usdtFee = volume * 0.2 ether;
+        IERC20 usdt = IERC20(
+            address(0x5FbDB2315678afecb367f032d93F642f64180aa3)
+        );
 
-        require(_tokenB.balanceOf(owner) >= exchangeAmount, "Not enough token");
+        require(
+            _tokenB.balanceOf(owner) >= volume + tokenFee,
+            "Not enough token"
+        );
+        require(usdt.balanceOf(owner) >= usdtFee, "Not enough USDT");
 
-        _tokenB.transferFrom(owner, address(this), exchangeAmount);
+        _tokenB.transferFrom(owner, order.owner, volume);
+        _tokenB.transferFrom(owner, address(this), tokenFee);
 
         _tokenA.transferFrom(address(this), owner, volume);
-        _tokenB.transferFrom(address(this), order.owner, exchangeAmount);
+        usdt.transferFrom(owner, address(this), usdtFee);
 
         if (order.amount == volume) {
             _orderList[bundleId] = _orderList[_totalOrder - 1];
