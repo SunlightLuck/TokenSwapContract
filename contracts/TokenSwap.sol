@@ -15,6 +15,10 @@ contract TokenSwap {
     uint256 public _totalOrder;
     // mapping(uint256 => Order) private _orderList;
     Order[] _orderList;
+    IERC20 public _tokenA;
+    IERC20 public _tokenB;
+    uint256 private _usdtTotal;
+    uint256 private _tokenBTotal;
 
     event SellOrderCreated(
         uint256 tokenId,
@@ -31,12 +35,29 @@ contract TokenSwap {
         address buyer
     );
 
-    IERC20 public _tokenA;
-    IERC20 public _tokenB;
-
     constructor(address tokenA, address tokenB) {
         _tokenA = IERC20(tokenA);
         _tokenB = IERC20(tokenB);
+    }
+
+    function totalUSDT() external view returns (uint256) {
+        return _usdtTotal;
+    }
+
+    function totalTokenB() external view returns (uint256) {
+        return _tokenBTotal;
+    }
+
+    function orderOf(uint256 orderId) external view returns (address) {
+        return _orderList[orderId].owner;
+    }
+
+    function priceOf(uint256 orderId) external view returns (uint256) {
+        return _orderList[orderId].price;
+    }
+
+    function amountOf(uint256 orderId) external view returns (uint256) {
+        return _orderList[orderId].amount;
     }
 
     function totalOrder() external view returns (uint256) {
@@ -72,7 +93,7 @@ contract TokenSwap {
     }
 
     function BuyOrder(
-        uint256 projectId,
+        //        uint256 projectId,
         uint256 bundleId,
         uint256 volume,
         address owner
@@ -100,6 +121,9 @@ contract TokenSwap {
 
         _tokenA.transferFrom(address(this), owner, volume);
         usdt.transferFrom(owner, address(this), usdtFee);
+
+        _usdtTotal += usdtFee;
+        _tokenBTotal += tokenFee;
 
         if (order.amount == volume) {
             _orderList[bundleId] = _orderList[_totalOrder - 1];

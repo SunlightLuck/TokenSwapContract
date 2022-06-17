@@ -3,16 +3,16 @@ const { ethers } = require("hardhat");
 
 describe("Greeter", function () {
   it("Should return the new greeting once it's changed", async function () {
-    const Greeter = await ethers.getContractFactory("Greeter");
-    const greeter = await Greeter.deploy("Hello, world!");
-    await greeter.deployed();
+    const tokenAFactory = await ethers.getContractFactory("TokenA");
+    const tokenBFactory = await ethers.getContractFactory("TokenA");
+    const tokenA = await tokenAFactory.deploy();
+    const tokenB = await tokenAFactory.deploy();
+    await tokenA.deployed();
+    await tokenB.deployed();
 
-    expect(await greeter.greet()).to.equal("Hello, world!");
-
-    const setGreetingTx = await greeter.setGreeting("Hola, mundo!");
-
-    // wait until the transaction is mined
-    await setGreetingTx.wait();
+    const swapFactory = await ethers.getContractFactory("TokenSwap");
+    const swapContract = await swapFactory.deploy(tokenA, tokenB);
+    await swapContract.deployed();
 
     expect(await greeter.greet()).to.equal("Hola, mundo!");
   });
