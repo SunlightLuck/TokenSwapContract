@@ -2,6 +2,7 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "hardhat/console.sol";
 
 contract TokenSwap {
     struct Order {
@@ -64,16 +65,13 @@ contract TokenSwap {
         return _totalOrder;
     }
 
-    function ownerOf(uint256 orderId) external view returns (address) {
-        return _orderList[orderId].owner;
-    }
-
     function CreateSellOrder(
         uint256 tokenId,
         uint256 volume,
         uint256 price,
         address owner
     ) public {
+        console.log("Create Sell Order", tokenId, owner);
         require(msg.sender == owner, "Only owner is available");
         Order memory newOrder = Order(owner, tokenId, volume, price, true);
         _orderList.push(newOrder);
@@ -98,14 +96,16 @@ contract TokenSwap {
         uint256 volume,
         address owner
     ) public {
-        require(msg.sender == owner, "Only owner is available");
+        //require(msg.sender == owner, "Only owner is available");
         require(_orderList[bundleId].amount >= volume, "Not enought toke");
         require(bundleId <= _totalOrder, "Invalid order");
 
         Order memory order = _orderList[bundleId];
 
-        uint256 tokenFee = (volume * 2) / 100;
-        uint256 usdtFee = volume * 0.2 ether;
+        uint256 exchangeCount = volume * order.price;
+        uint256 tokenFee = (exchangeCount * 2) / 100;
+        uint256 usdtFee = exchangeCount * 0.2 ether;
+
         IERC20 usdt = IERC20(
             address(0x5FbDB2315678afecb367f032d93F642f64180aa3)
         );
@@ -116,11 +116,11 @@ contract TokenSwap {
         );
         require(usdt.balanceOf(owner) >= usdtFee, "Not enough USDT");
 
-        _tokenB.transferFrom(owner, order.owner, volume);
+        _tokenB.transferFrom(owner, order.owner, exchangeCount);
         _tokenB.transferFrom(owner, address(this), tokenFee);
 
         _tokenA.transferFrom(address(this), owner, volume);
-        usdt.transferFrom(owner, address(this), usdtFee);
+        //        usdt.transferFrom(owner, address(this), usdtFee);
 
         _usdtTotal += usdtFee;
         _tokenBTotal += tokenFee;
