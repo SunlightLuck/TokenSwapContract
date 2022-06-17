@@ -56,14 +56,20 @@ contract TokenSwap {
         uint256 price,
         address owner
     ) public {
+        require(msg.sender == owner, "Only owner is available");
         Order memory newOrder = Order(owner, tokenId, volume, price, true);
         _orderList.push(newOrder);
         // _orderList[_totalOrder] = newOrder;
+        _tokenA.transferFrom(owner, address(this), volume);
         _totalOrder += 1;
     }
 
     function CancelSellOrder(uint256 orderId, address owner) public {
         require(owner == _orderList[orderId].owner, "It's not yours");
+        require(owner == msg.sender, "Only owner is available");
+
+        _tokenA.transferFrom(address(this), owner, _orderList[orderId].amount);
+
         _orderList[orderId] = _orderList[_totalOrder - 1];
         _orderList.pop();
         _totalOrder -= 1;
@@ -75,5 +81,27 @@ contract TokenSwap {
         uint256 bundleId,
         uint256 volume,
         address owner
-    ) public {}
+    ) public {
+        require(msg.sender == owner, "Only owner is available");
+        require(_orderList[bundleId].amount >= volume, "Not enought token");
+        require(bundleId <= _totalOrder, "Invalid order");
+
+        Order memory order = _orderList[bundleId];
+
+        uint256 exchangeAmount = volume * (order.price + 0.5 ether);
+        exchangeAmount = exchangeAmount + (exchangeAmount * 2) / 100;
+
+        _tokenB.transferFrom(owner, address(this), exchangeAmount);
+
+        _tokenA.transferFrom(address(this), owner, volume);
+        _tokenB.transferFrom(address(this), order.owner, exchangeAmount);
+
+        emit BuyOrderFilled(
+            bundleId,
+            _orderList[bundleId].amount,
+            _orderList[bundleId].price,
+            _orderList[bundleId].owner,
+            owner
+        );
+    }
 }
